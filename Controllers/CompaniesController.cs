@@ -1,4 +1,5 @@
 using DapperApi.Contract;
+using DapperApi.Dto;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DapperApi.Controllers;
@@ -37,6 +38,21 @@ public class CompainesController : ControllerBase
             if (company == null)
                 return NotFound();
             return Ok(company);
+        }
+        catch (Exception ex)
+        {
+            //log error
+            return StatusCode(500, ex.Message);
+        }
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateCompany(CompanyForCreationDto company)
+    {
+        try
+        {
+            var createdCompany = await _companyRepo.CreateCompany(company);
+            return CreatedAtRoute("CompanyById", new { id = createdCompany.Id }, createdCompany);
         }
         catch (Exception ex)
         {
