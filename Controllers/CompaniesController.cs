@@ -20,9 +20,25 @@ public class CompainesController : ControllerBase
         {
             var companies = await _companyRepo.GetCompanies();
             return Ok(companies);
-
         }
-        catch(Exception ex)
+        catch (Exception ex)
+        {
+            //log error
+            return StatusCode(500, ex.Message);
+        }
+    }
+
+    [HttpGet("{id}", Name = "CompanyById")]
+    public async Task<IActionResult> GetCompany(int id)
+    {
+        try
+        {
+            var company = await _companyRepo.GetCompanyById(id);
+            if (company == null)
+                return NotFound();
+            return Ok(company);
+        }
+        catch (Exception ex)
         {
             //log error
             return StatusCode(500, ex.Message);

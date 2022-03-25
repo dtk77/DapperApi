@@ -22,4 +22,17 @@ public class CompanyRepository : ICompanyRepository
             return companies.ToList();
         }
     }
+
+    public async Task<Company> GetCompanyById(int id)
+    {
+        var query = "SELECT * FROM Companies WHERE Id = @id";
+
+        using (var connect = _context.CreateConnection())
+        {
+            var company = await connect.QuerySingleOrDefaultAsync<Company>(query, new { id });
+
+            return company;
+        }
+
+    }
 }
