@@ -17,9 +17,9 @@ public class CompanyRepository : ICompanyRepository
 
     public async Task<Company> CreateCompany(CompanyForCreationDto company)
     {
-          var query = "INSERT INTO Companies (Name, Address, Country) VALUES (@Name, @Address, @Country)"
-                        + "SELECT CAST(SCOPE_IDENTITY() as int)";
-           
+        var query = "INSERT INTO Companies (Name, Address, Country) VALUES (@Name, @Address, @Country)"
+                      + "SELECT CAST(SCOPE_IDENTITY() as int)";
+
         var parameters = new DynamicParameters();
         parameters.Add("Name", company.Name, DbType.String);
         parameters.Add("Address", company.Address, DbType.String);
@@ -39,6 +39,16 @@ public class CompanyRepository : ICompanyRepository
         }
     }
 
+    public async Task DeleteCompany(int id)
+    {
+        var query = "DELETE FROM Companies WHERE id = @id";
+
+        using (var connection = _context.CreateConnection())
+        {
+            await connection.ExecuteAsync(query, new { id });
+        }
+    }
+
     public async Task<IEnumerable<Company>> GetCompanies()
     {
         var query = "SELECT * FROM Companies";
@@ -49,16 +59,62 @@ public class CompanyRepository : ICompanyRepository
         }
     }
 
+    public async Task<Company> GetCompanyByEmployeeId(int id)
+    {
+        var procedureName = "ShowCompanyForProvidedEmployeeId";
+        var parameters = new DynamicParameters();
+        parameters.Add("Id", id, DbType.Int32, ParameterDirection.Input);
+
+        using(var connection = _context.CreateConnection())
+        {
+            var company = await connection.QueryFirstOrDefaultAsync<Company>
+                (procedureName, parameters, commandType: CommandType.StoredProcedure);
+
+            return company;
+        }
+    }
+
     public async Task<Company> GetCompanyById(int id)
     {
         var query = "SELECT * FROM Companies WHERE Id = @id";
 
-        using (var connect = _context.CreateConnection())
+        using (var connection = _context.CreateConnection())
         {
-            var company = await connect.QuerySingleOrDefaultAsync<Company>(query, new { id });
+            var company = await connection.QuerySingleOrDefaultAsync<Company>(query, new { id });
 
             return company;
         }
+    }
 
+    public async Task UpdateCompany(int id, CompanyForUpdateDto company)
+    {
+        var query = "UPDATE Companies SET Name = @Name, Address = @Address, Country = @Country WHERE id = @id";
+
+        var parameters = new DynamicParameters();
+        parameters.Add("id", id, DbType.Int32);
+        parameters.Add("Name", company.Name, DbType.String);
+        parameters.Add("Address", company.Address, DbType.String);
+        parameters.Add("Country", company.Country, DbType.String);
+
+        using (var connection = _context.CreateConnection())
+        {
+            await connection.ExecuteAsync(query, parameters);
+        }
+    }
+
+    public async Task<Company> GetCompanyEmployeesMultipleResults(int id)
+    {
+        var query = "SELECT * FROM Companies WHERE Id = @Id;" +
+                    "SELECT * FROM Employees WHERE CompanyId = @Id";
+
+        using (var connection = _context.CreateConnection())
+        using (var multi = await connection.QueryMultipleAsync(query, new { id }))
+        {
+            var company = await multi.ReadSingleOrDefaultAsync<Company>();
+            if (company != null)
+                company.Employees = (await multi.ReadAsync<Employee>()).ToList();
+
+            return company;
+        }
     }
 }
